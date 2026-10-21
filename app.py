@@ -1,15 +1,15 @@
 import pickle
 import numpy as np
-import pandas as pd
 from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# Load the trained model from loan.pkl
-with open('loan.pkl', 'rb') as f:
+# Load the trained Logistic Regression model
+model_path = 'loan.pkl'
+with open(model_path, 'rb') as f:
     model = pickle.load(f)
 
-# Modern, responsive HTML template with embedded Bootstrap 5 styling
+# HTML Template with Embedded Tailwind CSS Layout
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -17,262 +17,189 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loan Eligibility Prediction Portal</title>
-    <!-- Bootstrap 5 CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding-bottom: 50px;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        .card {
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        }
-        .card-header {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: white;
-            border-radius: 1rem 1rem 0 0 !important;
-            padding: 1.5rem;
-        }
-        .form-label {
-            font-weight: 600;
-            color: #333;
-            font-size: 0.9rem;
-        }
-        .form-control, .form-select {
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            transition: all 0.3s;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #0d6efd;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            transition: all 0.3s;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
-        }
-        .result-card {
-            border-radius: 1rem;
-            padding: 2rem;
-            text-align: center;
-            margin-top: 2rem;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body>
-
-    <!-- Navbar -->
-    <nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-university me-2 text-primary"></i> SmartLoan Predictor
-            </a>
+<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-slate-100 min-h-screen py-10 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <span class="bg-indigo-500/10 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider border border-indigo-500/20">AI-Powered Financial Services</span>
+            <h1 class="text-4xl font-extrabold text-white mt-3 tracking-tight">Loan Eligibility Predictor</h1>
+            <p class="text-slate-400 mt-2 text-sm sm:text-base">Provide applicant details below to instantly evaluate loan approval status.</p>
         </div>
-    </nav>
 
-    <!-- Main Container -->
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-9">
-                <div class="card shadow-lg">
-                    <div class="card-header text-center">
-                        <h2><i class="fas fa-file-invoice-dollar me-2"></i>Loan Eligibility Form</h2>
-                        <p class="mb-0 text-white-50">Fill out the applicant information below to check loan approval status.</p>
-                    </div>
-                    <div class="card-body p-4 p-md-5">
-                        
-                        <form method="POST" action="/">
-                            <div class="row g-3">
-                                <!-- Gender -->
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="fas fa-venus-mars me-1 text-primary"></i> Gender</label>
-                                    <select class="form-select" name="Gender" required>
-                                        <option value="1" {% if data and data.Gender == '1' %}selected{% endif %}>Male</option>
-                                        <option value="0" {% if data and data.Gender == '0' %}selected{% endif %}>Female</option>
-                                    </select>
-                                </div>
-
-                                <!-- Married -->
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="fas fa-ring me-1 text-primary"></i> Married</label>
-                                    <select class="form-select" name="Married" required>
-                                        <option value="1" {% if data and data.Married == '1' %}selected{% endif %}>Yes</option>
-                                        <option value="0" {% if data and data.Married == '0' %}selected{% endif %}>No</option>
-                                    </select>
-                                </div>
-
-                                <!-- Dependents -->
-                                <div class="col-md-4">
-                                    <label class="form-label"><i class="fas fa-users me-1 text-primary"></i> Dependents</label>
-                                    <select class="form-select" name="Dependents" required>
-                                        <option value="0" {% if data and data.Dependents == '0' %}selected{% endif %}>0</option>
-                                        <option value="1" {% if data and data.Dependents == '1' %}selected{% endif %}>1</option>
-                                        <option value="2" {% if data and data.Dependents == '2' %}selected{% endif %}>2</option>
-                                        <option value="3" {% if data and data.Dependents == '3' %}selected{% endif %}>3+</option>
-                                    </select>
-                                </div>
-
-                                <!-- Education -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-graduation-cap me-1 text-primary"></i> Education</label>
-                                    <select class="form-select" name="Education" required>
-                                        <option value="1" {% if data and data.Education == '1' %}selected{% endif %}>Graduate</option>
-                                        <option value="0" {% if data and data.Education == '0' %}selected{% endif %}>Not Graduate</option>
-                                    </select>
-                                </div>
-
-                                <!-- Self Employed -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-briefcase me-1 text-primary"></i> Self Employed</label>
-                                    <select class="form-select" name="Self_Employed" required>
-                                        <option value="0" {% if data and data.Self_Employed == '0' %}selected{% endif %}>No</option>
-                                        <option value="1" {% if data and data.Self_Employed == '1' %}selected{% endif %}>Yes</option>
-                                    </select>
-                                </div>
-
-                                <!-- Applicant Income -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-wallet me-1 text-primary"></i> Applicant Income</label>
-                                    <input type="number" step="any" class="form-control" name="ApplicantIncome" placeholder="e.g. 5000" value="{{ data.ApplicantIncome if data else '' }}" required>
-                                </div>
-
-                                <!-- Coapplicant Income -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-hand-holding-usd me-1 text-primary"></i> Coapplicant Income</label>
-                                    <input type="number" step="any" class="form-control" name="CoapplicantIncome" placeholder="e.g. 1500" value="{{ data.CoapplicantIncome if data else '' }}" required>
-                                </div>
-
-                                <!-- Loan Amount -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-dollar-sign me-1 text-primary"></i> Loan Amount (in thousands)</label>
-                                    <input type="number" step="any" class="form-control" name="LoanAmount" placeholder="e.g. 128" value="{{ data.LoanAmount if data else '' }}" required>
-                                </div>
-
-                                <!-- Loan Amount Term -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-calendar-alt me-1 text-primary"></i> Loan Term (in months)</label>
-                                    <input type="number" class="form-control" name="Loan_Amount_Term" placeholder="e.g. 360" value="{{ data.Loan_Amount_Term if data else '' }}" required>
-                                </div>
-
-                                <!-- Credit History -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-history me-1 text-primary"></i> Credit History</label>
-                                    <select class="form-select" name="Credit_History" required>
-                                        <option value="1" {% if data and data.Credit_History == '1' %}selected{% endif %}>1.0 (Good History)</option>
-                                        <option value="0" {% if data and data.Credit_History == '0' %}selected{% endif %}>0.0 (Bad History)</option>
-                                    </select>
-                                </div>
-
-                                <!-- Property Area -->
-                                <div class="col-md-6">
-                                    <label class="form-label"><i class="fas fa-map-marker-alt me-1 text-primary"></i> Property Area</label>
-                                    <select class="form-select" name="Property_Area" required>
-                                        <option value="2" {% if data and data.Property_Area == '2' %}selected{% endif %}>Urban</option>
-                                        <option value="1" {% if data and data.Property_Area == '1' %}selected{% endif %}>Semiurban</option>
-                                        <option value="0" {% if data and data.Property_Area == '0' %}selected{% endif %}>Rural</option>
-                                    </select>
-                                </div>
-
-                                <!-- Submit Button -->
-                                <div class="col-12 mt-4">
-                                    <button type="submit" class="btn btn-primary w-100 py-3 shadow">
-                                        <i class="fas fa-check-circle me-2"></i> Predict Loan Eligibility
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-
-                        <!-- Prediction Result Card -->
-                        {% if prediction_text %}
-                        <div class="result-card shadow-sm {% if is_approved %}bg-success-subtle text-success-emphasis border border-success{% else %}bg-danger-subtle text-danger-emphasis border border-danger{% endif %}">
-                            <h4>
-                                {% if is_approved %}
-                                <i class="fas fa-circle-check fa-lg me-2 text-success"></i> Congratulations!
-                                {% else %}
-                                <i class="fas fa-circle-xmark fa-lg me-2 text-danger"></i> Application Status
-                                {% endif %}
-                            </h4>
-                            <p class="fs-5 mb-0 mt-2 fw-semibold">{{ prediction_text }}</p>
-                        </div>
-                        {% endif %}
-
-                    </div>
-                </div>
+        <!-- Main Card Container -->
+        <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-10">
+            
+            {% if prediction_text %}
+            <!-- Result Banner -->
+            <div class="mb-8 p-5 rounded-xl border text-center transition-all duration-300 {% if is_approved %} bg-emerald-950/40 border-emerald-500/40 text-emerald-300 {% else %} bg-rose-950/40 border-rose-500/40 text-rose-300 {% endif %}">
+                <h3 class="text-lg font-semibold uppercase tracking-wider mb-1">Evaluation Result</h3>
+                <p class="text-2xl font-bold">{{ prediction_text }}</p>
             </div>
+            {% endif %}
+
+            <!-- Input Form -->
+            <form action="/predict" method="POST" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                <!-- Gender -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Gender</label>
+                    <select name="Gender" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="1">Male</option>
+                        <option value="0">Female</option>
+                    </select>
+                </div>
+
+                <!-- Married -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Marital Status</label>
+                    <select name="Married" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="1">Yes (Married)</option>
+                        <option value="0">No (Unmarried)</option>
+                    </select>
+                </div>
+
+                <!-- Dependents -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Dependents</label>
+                    <select name="Dependents" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3+</option>
+                    </select>
+                </div>
+
+                <!-- Education -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Education</label>
+                    <select name="Education" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="1">Graduate</option>
+                        <option value="0">Not Graduate</option>
+                    </select>
+                </div>
+
+                <!-- Self Employed -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Self Employed</label>
+                    <select name="Self_Employed" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <!-- Applicant Income -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Applicant Income ($)</label>
+                    <input type="number" name="ApplicantIncome" placeholder="e.g. 5000" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+
+                <!-- Coapplicant Income -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Coapplicant Income ($)</label>
+                    <input type="number" step="any" name="CoapplicantIncome" placeholder="e.g. 1500" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+
+                <!-- Loan Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Loan Amount (in thousands)</label>
+                    <input type="number" step="any" name="LoanAmount" placeholder="e.g. 120" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+
+                <!-- Loan Amount Term -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Loan Term (in months)</label>
+                    <input type="number" name="Loan_Amount_Term" placeholder="e.g. 360" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+
+                <!-- Credit History -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Credit History Meets Guidelines</label>
+                    <select name="Credit_History" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="1">Yes (1.0)</option>
+                        <option value="0">No (0.0)</option>
+                    </select>
+                </div>
+
+                <!-- Property Area -->
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Property Area</label>
+                    <select name="Property_Area" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                        <option value="2">Urban</option>
+                        <option value="1">Semiurban</option>
+                        <option value="0">Rural</option>
+                    </select>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="sm:col-span-2 mt-4">
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3.5 px-6 rounded-lg shadow-lg shadow-indigo-600/30 transition-all duration-200 transform hover:-translate-y-0.5">
+                        Predict Loan Eligibility
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-xs text-slate-500">
+            Flask Deployment • Logistic Regression Model
         </div>
     </div>
-
-    <!-- Bootstrap JS Bundle CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 """
 
-@app.route("/", methods=["GET", "POST"])
+@app.route('/')
 def home():
-    prediction_text = None
-    is_approved = False
-    data = None
+    return render_template_string(HTML_TEMPLATE)
 
-    if request.method == "POST":
-        try:
-            data = request.form
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        # Extract features matching model.feature_names_in_ order:
+        # 1. Gender, 2. Married, 3. Dependents, 4. Education, 5. Self_Employed,
+        # 6. ApplicantIncome, 7. CoapplicantIncome, 8. LoanAmount, 
+        # 9. Loan_Amount_Term, 10. Credit_History, 11. Property_Area
+        features = [
+            float(request.form['Gender']),
+            float(request.form['Married']),
+            float(request.form['Dependents']),
+            float(request.form['Education']),
+            float(request.form['Self_Employed']),
+            float(request.form['ApplicantIncome']),
+            float(request.form['CoapplicantIncome']),
+            float(request.form['LoanAmount']),
+            float(request.form['Loan_Amount_Term']),
+            float(request.form['Credit_History']),
+            float(request.form['Property_Area'])
+        ]
+        
+        final_features = np.array([features])
+        prediction = model.predict(final_features)
+        
+        output = prediction[0]
+        is_approved = (output == 1 or output == 'Y' or output == True)
+        
+        prediction_text = "Congratulations! Your Loan is Approved." if is_approved else "Sorry, your Loan Application is Rejected."
+            
+        return render_template_string(
+            HTML_TEMPLATE, 
+            prediction_text=prediction_text, 
+            is_approved=is_approved
+        )
+    except Exception as e:
+        return render_template_string(
+            HTML_TEMPLATE, 
+            prediction_text=f"Error in processing: {str(e)}", 
+            is_approved=False
+        )
 
-            # Map and cast form input values to float/int matching training setup
-            gender = float(data["Gender"])
-            married = float(data["Married"])
-            dependents = float(data["Dependents"])
-            education = float(data["Education"])
-            self_employed = float(data["Self_Employed"])
-            applicant_income = float(data["ApplicantIncome"])
-            coapplicant_income = float(data["CoapplicantIncome"])
-            loan_amount = float(data["LoanAmount"])
-            loan_amount_term = float(data["Loan_Amount_Term"])
-            credit_history = float(data["Credit_History"])
-            property_area = float(data["Property_Area"])
-
-            # Construct DataFrame matching the exact features expected by the model
-            input_df = pd.DataFrame([[
-                gender, married, dependents, education, self_employed,
-                applicant_income, coapplicant_income, loan_amount,
-                loan_amount_term, credit_history, property_area
-            ]], columns=[
-                "Gender", "Married", "Dependents", "Education", "Self_Employed",
-                "ApplicantIncome", "CoapplicantIncome", "LoanAmount",
-                "Loan_Amount_Term", "Credit_History", "Property_Area"
-            ])
-
-            # Run prediction
-            prediction = model.predict(input_df)[0]
-
-            # Interpret model output (1/Y for Approved, 0/N for Rejected)
-            if prediction == 1 or prediction == 'Y':
-                prediction_text = "Your Loan Application is Approved! You meet the eligibility criteria."
-                is_approved = True
-            else:
-                prediction_text = "Sorry, your Loan Application is Rejected based on the
+if __name__ == '__main__':
+    app.run(debug=True)
